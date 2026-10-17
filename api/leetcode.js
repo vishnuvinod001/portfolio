@@ -7,7 +7,7 @@ const QUERY = `
   query userStats($username: String!) {
     matchedUser(username: $username) {
       submitStatsGlobal { acSubmissionNum { difficulty count } }
-      userCalendar { streak totalActiveDays }
+      userCalendar { streak totalActiveDays submissionCalendar }
     }
   }`;
 
@@ -24,10 +24,13 @@ module.exports = async (req, res) => {
     const by = {};
     for (const x of user.submitStatsGlobal.acSubmissionNum) by[x.difficulty] = x.count;
     const cal = user.userCalendar || {};
+    let calendar = {};
+    try { calendar = JSON.parse(cal.submissionCalendar || '{}'); } catch (e) { /* keep empty */ }
     res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     res.status(200).json({
       total: by.All || 0, easy: by.Easy || 0, medium: by.Medium || 0, hard: by.Hard || 0,
       streak: cal.streak ?? null, activeDays: cal.totalActiveDays ?? null,
+      calendar, // { "unixSecondsAtUtcMidnight": submissionsThatDay }
     });
   } catch (e) {
     res.status(502).json({ error: 'leetcode unavailable' });
